@@ -28,19 +28,12 @@ async function getProduct(req, res) {
 async function handleImageProcess(file) {
   if (!file) return null;
 
-  // 1. Moderacion con Sightengine
-  const moderation = await moderateImage(file.path);
-  if (!moderation.safe) {
-    fs.unlinkSync(file.path);
-    throw new Error(moderation.reason);
-  }
-
-  // 2. Subida a Cloudinary
+  // 1. Subida directa a Cloudinary (Sin moderador porque solo el Admin sube porductos)
   const result = await cloudinary.uploader.upload(file.path, {
     folder: 'pancho-app-products',
   });
 
-  // 3. Eliminar archivo local
+  // 2. Eliminar archivo local temporal
   fs.unlinkSync(file.path);
 
   return result.secure_url;
