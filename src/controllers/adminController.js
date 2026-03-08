@@ -1,6 +1,7 @@
 const Order = require('../models/Order');
 const User = require('../models/User');
 const { STATUS_LABELS, formatARS } = require('../utils/whatsappBuilder');
+const { sendOrderStatusEmail } = require('../utils/resend');
 
 async function getOrders(req, res) {
   try {
@@ -47,8 +48,24 @@ async function updateOrderStatus(req, res) {
       { status },
       { new: true }
     ).populate('userId', 'name email phone');
+
     if (!order) return res.status(404).json({ error: 'Pedido no encontrado.' });
-    res.json({ order });
+
+    // Try to send email notification if it's a registered user
+    let notificationError = null;
+    if (order.userId && order.userId.email) {
+      try {
+        await sendOrderStatusEmail(order, order.userId);
+      } catch (err) {
+        notificationError = err.message;
+      }
+    }
+
+    res.json({
+      order,
+      notificationSent: !notificationError,
+      notificationError
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
